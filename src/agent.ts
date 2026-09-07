@@ -194,7 +194,7 @@ export async function runInvestigation(
     const { session } = await createAgentSession({
       cwd: WORKSPACE,
       model,
-      tools: ["read", "grep", "find", "ls"], // guarded bash supplied as a custom tool below
+      tools: ["read", "bash", "grep", "find", "ls"], // "bash" = our guarded custom tool; no edit/write
       customTools: [guardedBash, slackPostUpdate],
       resourceLoader: loader,
       sessionManager: SessionManager.inMemory(WORKSPACE),
