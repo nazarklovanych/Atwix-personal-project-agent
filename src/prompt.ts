@@ -43,19 +43,24 @@ export function buildSystemPrompt(config: ProjectConfig, workspace = "/work"): s
 
   if (config.databases.length > 0) {
     lines.push(`\n# Databases (MySQL, read-only user)`);
-    lines.push(`Passwords are in the environment. Query like this (never echo the password in your reply):`);
+    lines.push(`Passwords are in the environment — never echo them in your reply. The connection details below are authoritative; do NOT try to discover credentials on the server (e.g. MAGENTO_CLOUD_RELATIONSHIPS or env dumps) — they are only in YOUR environment anyway.`);
+    const serverByName = new Map(config.servers.map((s) => [s.name, s]));
     for (const db of config.databases) {
       const passRef = `$${db.password_env}`;
-      lines.push(
-        `- ${db.name}: \`MYSQL_PWD='${passRef}' mysql -h ${db.host}${db.port ? ` -P ${db.port}` : ""} -u ${db.user} -e "SELECT ..."\`${db.notes ? ` — ${db.notes}` : ""}`,
-      );
+      const via = db.via_server ? serverByName.get(db.via_server) : undefined;
+      if (via) {
+        lines.push(
+          `- ${db.name} — INTERNAL, reachable only through server "${via.name}". Run queries like this (password expands on your side):\n` +
+            `  \`ssh -o BatchMode=yes ${via.user}@${via.host}${via.port ? ` -p ${via.port}` : ""} "MYSQL_PWD='${passRef}' mysql -h ${db.host}${db.port ? ` -P ${db.port}` : ""} -u ${db.user} -e 'SELECT ...'"\`${db.notes ? `\n  (${db.notes})` : ""}`,
+        );
+      } else {
+        lines.push(
+          `- ${db.name}: \`MYSQL_PWD='${passRef}' mysql -h ${db.host}${db.port ? ` -P ${db.port}` : ""} -u ${db.user} -e "SELECT ..."\`${db.notes ? ` — ${db.notes}` : ""}`,
+        );
+      }
     }
-    const exampleEnv = config.databases[0]?.password_env ?? "DB_PASSWORD";
-    const sshExample = `ssh <user>@<server> "MYSQL_PWD='$${exampleEnv}' mysql -h 127.0.0.1 -u <user> -e 'SELECT 1'"`;
     lines.push(
-      `If a database host is NOT directly reachable (connection refused/timeout), it is probably internal to a server — query it through SSH instead ` +
-        `(the password env var expands on your side, inside the quoted shell string): \`${sshExample}\`. ` +
-        `Try the direct connection first, fall back to this. Note: DB credentials may only exist in your environment, not on the server.`,
+      `If a database with no via_server is not directly reachable (connection refused/timeout), fall back to running mysql through the most likely SSH server with the same pattern.`,
     );
   }
 
@@ -72,6 +77,7 @@ export function buildSystemPrompt(config: ProjectConfig, workspace = "/work"): s
   lines.push(`   - Cross-reference all three: e.g. "log shows X at time T" + "DB shows Y stuck since T" + "commit Z deployed at T" is a finding; a single signal alone is a hint.`);
   lines.push(`   - Only skip a signal if it is genuinely not applicable — and say so in your answer ("logs: nothing relevant found", "no DB tables involved").`);
   lines.push(`2. Start with the cheapest checks (log grep, small SELECTs, git log) before deep dives.`);
+  lines.push(`   - If a command fails twice in a row, STOP repeating it — the approach is wrong. Change strategy or use the configured connection details instead of trying to discover them. Never retry the same failing command more than twice.`);
   lines.push(`3. If the investigation will take more than a couple of minutes or you hit a significant discovery, post it with the slack_post_update tool so the thread sees progress.`);
   lines.push(`4. Final answer format — use markdown headings, bullets, and fenced code blocks so Slack renders it structurally:`);
   lines.push(`   ## Findings`);

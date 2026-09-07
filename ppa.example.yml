@@ -34,10 +34,11 @@ servers:
 
 databases:
   - name: main
-    host: db.internal.example.com
+    host: 127.0.0.1            # as seen FROM the server when via_server is set
     port: 3306
-    user: ppa_ro
+    user: app_user
     password_env: MAIN_DB_PASSWORD   # read from this env var (put it in .env)
+    via_server: prod                 # DB only reachable through this server (SSH)
     notes: production DB, read-only user
 
 # Free-form context injected into the agent's system prompt
