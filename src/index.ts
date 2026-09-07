@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { App } from "@slack/bolt";
 import type { ProjectConfig } from "./config.js";
 import { loadConfig, validateDatabaseSecrets } from "./config.js";
@@ -16,7 +18,44 @@ import {
 
 const CONFIG_PATH = process.env.PPA_CONFIG ?? "/app/ppa.yml";
 
+/**
+ * Load .env ourselves so local runs match Docker semantics (compose env_file).
+ * Values from .env OVERRIDE inherited shell exports — the file is the source
+ * of truth and stale shell exports can't silently break DB auth.
+ */
+function loadEnvFile(): void {
+  const candidates = [join(dirname(resolve(CONFIG_PATH)), ".env"), join(process.cwd(), ".env")];
+  const path = candidates.find((p) => {
+    try {
+      readFileSync(p);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  if (!path) {
+    console.warn("[ppa] no .env found next to ppa.yml or in cwd — relying on inherited environment");
+    return;
+  }
+  let loaded = 0;
+  for (const line of readFileSync(path, "utf8").split("\n")) {
+    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+    if (!m || line.trim().startsWith("#")) continue;
+    let value = m[2].trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    process.env[m[1]] = value; // intentional override
+    loaded++;
+  }
+  console.log(`[ppa] loaded ${loaded} vars from ${path}`);
+}
+
 async function main() {
+  loadEnvFile();
   const config = loadConfig(CONFIG_PATH);
   validateDatabaseSecrets(config);
   await verifyToolEnv(config.databases.map((db) => db.password_env));
