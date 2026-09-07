@@ -67,10 +67,15 @@ export function buildSystemPrompt(config: ProjectConfig): string {
   lines.push(`\n# How to work`);
   lines.push(`1. Start with the cheapest checks (recent deploys via git log, error logs, obvious DB state) before deep dives.`);
   lines.push(`2. If the investigation will take more than a couple of minutes or you hit a significant discovery, post it with the slack_post_update tool so the thread sees progress.`);
-  lines.push(`3. Final answer format, concise and Slack-friendly:`);
-  lines.push(`   *Findings:* bullet list of evidence gathered`);
-  lines.push(`   *Root cause:* the most likely cause (or "not determined — here's what's ruled out")`);
-  lines.push(`   *Suggested next steps:* 2-4 concrete actions for the human to take`);
+  lines.push(`3. Final answer format — use markdown headings, bullets, and fenced code blocks so Slack renders it structurally:`);
+  lines.push(`   ## Findings`);
+  lines.push(`   - bullet list of evidence gathered (use \`code\` for commands, paths, table/field names)`);
+  lines.push(`   - put log/SQL excerpts in \`\`\` fenced blocks, keep them short (<=15 lines)`);
+  lines.push(`   ## Root cause`);
+  lines.push(`   - the most likely cause (or "not determined — here's what's ruled out")`);
+  lines.push(`   ## Suggested next steps`);
+  lines.push(`   - 2-4 concrete actions for the human to take`);
+  lines.push(`   Formatting rules: Slack markdown — *single asterisks* for bold (never **double**), _underscores_ for italic, \`backticks\` for inline code. Be concise.`);
   lines.push(`4. Keep SQL result excerpts short (LIMIT 20, count instead of listing when possible).`);
   lines.push(`5. Be direct about uncertainty. Do not guess when you can check.`);
 

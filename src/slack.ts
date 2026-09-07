@@ -1,5 +1,5 @@
 import type { App } from "@slack/bolt";
-import type { WebClient } from "@slack/web-api";
+import type { KnownBlock, WebClient } from "@slack/web-api";
 
 export const EYES = "eyes";
 export const CHECK = "white_check_mark";
@@ -8,6 +8,61 @@ export const HOURGLASS = "hourglass_flowing_sand";
 
 /** Max characters for a single Slack message body we are willing to post. */
 const MAX_MSG_LEN = 35000;
+const MAX_BLOCKS = 45; // Slack API limit is 50; leave headroom
+
+/**
+ * Convert lightweight markdown to Slack Block Kit blocks for structured output:
+ *   # / ## / ### headings  → bold section headers
+ *   ``` fenced code ```   → code blocks
+ *   > quote lines          → context blocks
+ *   other lines            → mrkdwn sections (grouped)
+ * Falls back gracefully: anything odd becomes a plain section.
+ */
+export function mdToBlocks(md: string): KnownBlock[] {
+  const blocks: KnownBlock[] = [];
+  const lines = md.split("\n");
+  let textBuf: string[] = [];
+
+  const flushText = () => {
+    const text = textBuf.join("\n").trim();
+    if (text) blocks.push({ type: "section", text: { type: "mrkdwn", text } });
+    textBuf = [];
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const heading = line.match(/^#{1,4}\s+(.*)$/);
+    if (heading) {
+      flushText();
+      if (blocks.length > 0) blocks.push({ type: "divider" });
+      blocks.push({
+        type: "header",
+        text: { type: "plain_text", text: heading[1].replace(/[*_`]/g, "").slice(0, 150) },
+      });
+      continue;
+    }
+    if (line.trim().startsWith("```")) {
+      // No standalone code block type in classic Block Kit — keep fences in the
+      // mrkdwn section; Slack renders ``` inside mrkdwn as preformatted code.
+      textBuf.push(line);
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith("```")) {
+        textBuf.push(lines[i]);
+        i++;
+      }
+      textBuf.push(lines[i] ?? "```");
+      continue;
+    }
+    if (/^>\s?/.test(line)) {
+      flushText();
+      blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: line.replace(/^>\s?/, "").slice(0, 1900) }] });
+      continue;
+    }
+    textBuf.push(line);
+  }
+  flushText();
+  return blocks.slice(0, MAX_BLOCKS);
+}
 
 function trim(text: string): string {
   if (text.length <= MAX_MSG_LEN) return text;
@@ -47,17 +102,20 @@ export async function removeReaction(
   }
 }
 
-/** Post a message into the same thread as ts. Returns the posted message ts. */
+/** Post a message into the same thread as ts. Uses Block Kit formatting. Returns the posted message ts. */
 export async function postToThread(
   client: WebClient,
   channel: string,
   threadTs: string,
   text: string,
 ): Promise<string | undefined> {
+  const trimmed = trim(text);
+  const blocks = mdToBlocks(trimmed);
   const res = await client.chat.postMessage({
     channel,
     thread_ts: threadTs,
-    text: trim(text),
+    text: trimmed.slice(0, 2900), // fallback/preview text for notifications
+    blocks: blocks.length > 0 ? blocks : undefined,
     unfurl_links: false,
     unfurl_media: false,
   });
