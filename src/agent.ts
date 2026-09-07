@@ -180,7 +180,17 @@ export async function runInvestigation(
           } as never;
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return (innerBash.execute as any)(toolCallId, params, ...rest);
+        const result = await (innerBash.execute as any)(toolCallId, params, ...rest);
+        // Surface failed command output in the operator console for debugging.
+        const text = Array.isArray(result?.content)
+          ? result.content.map((c: { text?: string }) => c.text ?? "").join("")
+          : "";
+        const failed = result?.isError || /error|denied|refused|not found|no such|timed out/i.test(text);
+        if (failed && text.trim()) {
+          const tail = text.slice(-400).replace(/\n{2,}/g, "\n");
+          console.warn(`[ppa:tool:err] ${cmd.slice(0, 160)}\n${tail}\n---`);
+        }
+        return result;
       },
     });
 
@@ -285,6 +295,25 @@ export async function runInvestigation(
   }
 
   return { finalText, timedOut: false, toolTrail };
+}
+
+export async function verifyToolEnv(databaseNames: string[]): Promise<void> {
+  const bash = createBashTool(WORKSPACE);
+  for (const name of databaseNames) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await (bash.execute as any)("env-check", {
+      command: `test -n "\$${name}" && echo SET || echo UNSET`,
+    });
+    const out = Array.isArray(res?.content)
+      ? res.content.map((c: { text?: string }) => c.text ?? "").join("")
+      : "";
+    if (!out.includes("SET")) {
+      throw new Error(
+        `env var ${name} is set in PPA's process but NOT visible inside the bash tool — ` +
+          `commands that need it will fail. This is a tool environment problem, not a config problem.`,
+      );
+    }
+  }
 }
 
 /** Drop the cached session for a thread (used when the session is unusable). */

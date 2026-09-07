@@ -1,7 +1,7 @@
 import { App } from "@slack/bolt";
 import type { ProjectConfig } from "./config.js";
 import { loadConfig, validateDatabaseSecrets } from "./config.js";
-import { forgetSession, runInvestigation, InvestigationTimeoutError } from "./agent.js";
+import { forgetSession, runInvestigation, InvestigationTimeoutError, verifyToolEnv } from "./agent.js";
 import {
   addReaction,
   assertTokens,
@@ -19,6 +19,7 @@ const CONFIG_PATH = process.env.PPA_CONFIG ?? "/app/ppa.yml";
 async function main() {
   const config = loadConfig(CONFIG_PATH);
   validateDatabaseSecrets(config);
+  await verifyToolEnv(config.databases.map((db) => db.password_env));
   const { botToken, appToken } = assertTokens();
 
   const app = new App({
