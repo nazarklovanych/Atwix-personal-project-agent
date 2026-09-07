@@ -307,7 +307,7 @@ export async function verifyToolEnv(databaseNames: string[]): Promise<void> {
     const out = Array.isArray(res?.content)
       ? res.content.map((c: { text?: string }) => c.text ?? "").join("")
       : "";
-    if (!out.includes("SET")) {
+    if (out.includes("UNSET") || !out.includes("SET")) {
       throw new Error(
         `env var ${name} is set in PPA's process but NOT visible inside the bash tool — ` +
           `commands that need it will fail. This is a tool environment problem, not a config problem.`,
