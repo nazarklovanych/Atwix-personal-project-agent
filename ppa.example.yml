@@ -1,0 +1,46 @@
+# Personal Project Agent — example per-project config
+# Copy to ppa.yml next to your docker-compose.yml and edit.
+# Secrets (DB passwords) never go here — they live in .env, referenced by name.
+
+name: my-saas
+
+# Only respond to mentions in these channels (recommended when one Slack app
+# serves several projects). Channel IDs: Slack → channel → View details.
+# Remove or leave empty to respond in any channel the bot is in.
+slack_channel_ids:
+  - C0123456789
+
+defaults:
+  timeout_minutes: 8          # hard cap per investigation
+  # Model as "provider/id". Anthropic, OpenAI, z.ai GLM and more are built in.
+  # GLM example: zai/glm-4.7  (requires ZAI_API_KEY in .env)
+  model: anthropic/claude-sonnet-4-5
+
+repos:
+  - name: api
+    url: git@github.com:me/my-saas-api.git
+    notes: Laravel API; mail queue workers live in app/Jobs, config in config/mail.php
+  - name: web
+    url: git@github.com:me/my-saas-web.git
+
+servers:
+  - name: prod
+    host: prod.example.com
+    user: ppa
+    log_paths:
+      - /var/www/api/storage/logs/laravel.log
+      - /var/log/nginx/error.log
+    notes: single-box deploy; supervisor runs queue workers
+
+databases:
+  - name: main
+    host: db.internal.example.com
+    port: 3306
+    user: ppa_ro
+    password_env: MAIN_DB_PASSWORD   # read from this env var (put it in .env)
+    notes: production DB, read-only user
+
+# Free-form context injected into the agent's system prompt
+notes: |
+  Emails are sent by the mail queue worker (supervisor job "mail-queue").
+  Deploy = "dep deploy" via Deployer; last deploy marker in .env APP_VERSION.

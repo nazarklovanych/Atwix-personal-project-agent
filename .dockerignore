@@ -1,0 +1,9 @@
+node_modules
+dist
+work
+.env
+ppa_key
+ppa_key.pub
+.git
+.agents
+README.md

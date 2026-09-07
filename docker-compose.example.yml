@@ -1,0 +1,19 @@
+# Personal Project Agent — copy into your project folder next to:
+#   ppa.yml        (from ppa.example.yml — repos, servers, databases)
+#   .env           (from .env.example — Slack tokens, API key, DB passwords)
+#   ppa_key        (private SSH key: git + server access, read-only mounted)
+services:
+  ppa:
+    image: ppa:latest            # build once: docker build -t ppa:latest /path/to/personal-project-agent
+    # build: /path/to/personal-project-agent   # or build directly from the repo
+    container_name: ppa-my-saas  # unique per project
+    env_file: .env
+    volumes:
+      - ./ppa.yml:/app/ppa.yml:ro
+      - ./ppa_key:/home/ppa/.ssh/id_ed25519:ro
+      - ./work:/work             # persistent git clones survive restarts
+    restart: unless-stopped
+    # If your DB/servers are only reachable on the host network or a VPN:
+    # network_mode: host
+    # extra_hosts:
+    #   - "db.internal:host-gateway"

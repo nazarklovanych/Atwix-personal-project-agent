@@ -1,0 +1,16 @@
+node_modules/
+dist/
+
+# secrets / credentials
+.env
+ppa_key
+ppa_key.pub
+*.pem
+
+# real per-project config (keep only *.example.* tracked)
+ppa.yml
+docker-compose.yml
+work/
+ppa-agent/
+
+*.log
