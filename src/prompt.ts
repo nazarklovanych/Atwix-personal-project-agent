@@ -51,11 +51,11 @@ export function buildSystemPrompt(config: ProjectConfig, workspace = "/work"): s
       if (via) {
         lines.push(
           `- ${db.name} — INTERNAL, reachable only through server "${via.name}". Run queries like this (password expands on your side):\n` +
-            `  \`ssh -o BatchMode=yes ${via.user}@${via.host}${via.port ? ` -p ${via.port}` : ""} "MYSQL_PWD='${passRef}' mysql -h ${db.host}${db.port ? ` -P ${db.port}` : ""} -u ${db.user} -e 'SELECT ...'"\`${db.notes ? `\n  (${db.notes})` : ""}`,
+            `  \`ssh -o BatchMode=yes ${via.user}@${via.host}${via.port ? ` -p ${via.port}` : ""} "MYSQL_PWD='${passRef}' mysql -h ${db.host}${db.port ? ` -P ${db.port}` : ""} -u ${db.user}${db.database ? ` -D ${db.database}` : ""} -e 'SELECT ...'"\`${db.notes ? `\n  (${db.notes})` : ""}`,
         );
       } else {
         lines.push(
-          `- ${db.name}: \`MYSQL_PWD='${passRef}' mysql -h ${db.host}${db.port ? ` -P ${db.port}` : ""} -u ${db.user} -e "SELECT ..."\`${db.notes ? ` — ${db.notes}` : ""}`,
+          `- ${db.name}: \`MYSQL_PWD='${passRef}' mysql -h ${db.host}${db.port ? ` -P ${db.port}` : ""} -u ${db.user}${db.database ? ` -D ${db.database}` : ""} -e "SELECT ..."\`${db.notes ? ` — ${db.notes}` : ""}`,
         );
       }
     }

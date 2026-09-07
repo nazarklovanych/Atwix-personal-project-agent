@@ -23,6 +23,8 @@ export interface DatabaseConfig {
   host: string;
   port?: number;
   user: string;
+  /** Database/schema name (needed when the user has no default database, e.g. Magento Cloud) */
+  database?: string;
   /** Name of the env var holding the password — NEVER the password itself */
   password_env: string;
   /** Server name (from servers[]) to tunnel through when the DB is not directly reachable */
@@ -112,6 +114,7 @@ export function loadConfig(path: string): ProjectConfig {
         password_env: asString(x.password_env, `databases[${i}].password_env`),
       };
       if (typeof x.port === "number") db.port = x.port;
+      if (typeof x.database === "string") db.database = x.database.trim();
       if (typeof x.via_server === "string") db.via_server = x.via_server.trim();
       if (typeof x.notes === "string") db.notes = x.notes;
       return db;
