@@ -129,7 +129,7 @@ export async function runInvestigation(
   config: ProjectConfig,
   target: InvestigationTarget,
   userText: string,
-): Promise<{ finalText: string; timedOut: boolean }> {
+): Promise<{ finalText: string; timedOut: boolean; toolTrail: string[] }> {
   evictIdleSessions();
 
   let cached = sessions.get(target.threadTs);
@@ -210,6 +210,7 @@ export async function runInvestigation(
   let timedOut = false;
   let finalText = "";
   let lastError: string | undefined;
+  const toolTrail: string[] = [];
 
   // Track latest assistant text + errors from the event stream,
   // and log tool activity so the operator can watch the investigation live.
@@ -218,8 +219,10 @@ export async function runInvestigation(
     if (event.type === "tool_execution_start") {
       const e = event as { toolName?: string; args?: Record<string, unknown> };
       const arg = e.args && typeof e.args === "object" ? Object.values(e.args)[0] : undefined;
-      const detail = typeof arg === "string" ? arg.slice(0, 200).replace(/\s+/g, " ") : "";
-      console.log(`[ppa:tool] ${e.toolName ?? "?"}${detail ? ` — ${detail}` : ""}`);
+      const detail = typeof arg === "string" ? arg.slice(0, 120).replace(/\s+/g, " ") : "";
+      const label = `${e.toolName ?? "?"}${detail ? `: ${detail}` : ""}`;
+      toolTrail.push(label);
+      console.log(`[ppa:tool] ${label}`);
     }
     if (event.type === "tool_execution_end") {
       const e = event as { toolName?: string; isError?: boolean };
@@ -273,6 +276,7 @@ export async function runInvestigation(
     return {
       finalText: finalText || "",
       timedOut: true,
+      toolTrail,
     };
   }
 
@@ -280,7 +284,7 @@ export async function runInvestigation(
     throw new Error(lastError ?? "agent produced no final answer");
   }
 
-  return { finalText, timedOut: false };
+  return { finalText, timedOut: false, toolTrail };
 }
 
 /** Drop the cached session for a thread (used when the session is unusable). */

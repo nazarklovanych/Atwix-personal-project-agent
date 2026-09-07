@@ -58,15 +58,28 @@ async function main() {
       await addReaction(client, event.channel, threadTs, EYES);
 
       try {
-        const { finalText, timedOut } = await runInvestigation(config, { client, channel: event.channel, threadTs }, userText);
+        const { finalText, timedOut, toolTrail } = await runInvestigation(
+          config,
+          { client, channel: event.channel, threadTs },
+          userText,
+        );
 
         if (timedOut) {
+          // Show what was actually done, not the model's mid-stream musing.
+          const lastSteps = toolTrail.slice(-8);
+          const steps =
+            lastSteps.length > 0
+              ? `\n\n*What I was doing (last ${lastSteps.length} steps):*\n` +
+                lastSteps.map((s) => `• ${s}`).join("\n")
+              : "";
           await postToThread(
             client,
             event.channel,
             threadTs,
             `:hourglass_flowing_sand: *Timed out* after ${config.defaults.timeout_minutes} min. ` +
-              (finalText ? `Partial findings so far:\n\n${finalText}` : "No partial findings were collected. Try a narrower question or raise `defaults.timeout_minutes` in ppa.yml."),
+              `The investigation is still in my head — reply *continue* in this thread and I'll pick up where I left off.` +
+              steps +
+              `\n\n_Tip: raise_ defaults.timeout_minutes _in ppa.yml for deep-dives._`,
           );
           await addReaction(client, event.channel, threadTs, HOURGLASS);
         } else {
