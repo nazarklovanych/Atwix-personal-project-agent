@@ -187,7 +187,7 @@ export async function runInvestigation(
     const loader = new DefaultResourceLoader({
       cwd: WORKSPACE,
       agentDir,
-      systemPromptOverride: () => buildSystemPrompt(config),
+      systemPromptOverride: () => buildSystemPrompt(config, WORKSPACE),
     });
     await loader.reload();
 

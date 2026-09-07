@@ -4,7 +4,7 @@ import type { ProjectConfig } from "./config.js";
  * Build the investigation-only system prompt, embedding the project config
  * (repos, servers, databases) so the agent knows exactly what it can reach.
  */
-export function buildSystemPrompt(config: ProjectConfig): string {
+export function buildSystemPrompt(config: ProjectConfig, workspace = "/work"): string {
   const lines: string[] = [];
 
   lines.push(`# Role`);
@@ -23,8 +23,8 @@ export function buildSystemPrompt(config: ProjectConfig): string {
   lines.push(`- Never reveal passwords or tokens, even though you can read them from the environment.`);
 
   if (config.repos.length > 0) {
-    lines.push(`\n# Git repositories (workspace: /work)`);
-    lines.push(`Clones live under /work/<repo-name>. If a directory is missing, run \`git clone <url> /work/<name>\`. If it exists, refresh first: \`git -C /work/<name> fetch --quiet && git -C /work/<name> log --oneline -20\`. Useful for: blaming recent changes, reading code paths, checking config files.`);
+    lines.push(`\n# Git repositories (workspace: ${workspace})`);
+    lines.push(`Clones live under ${workspace}/<repo-name>. If a directory is missing, run \`git clone <url> ${workspace}/<name>\`. If it exists, refresh first: \`git -C ${workspace}/<name> fetch --quiet && git -C ${workspace}/<name> log --oneline -20\`. Useful for: blaming recent changes, reading code paths, checking config files.`);
     for (const repo of config.repos) {
       lines.push(`- ${repo.name}: ${repo.url}${repo.notes ? ` — ${repo.notes}` : ""}`);
     }
