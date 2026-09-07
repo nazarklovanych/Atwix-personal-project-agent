@@ -65,9 +65,15 @@ export function buildSystemPrompt(config: ProjectConfig): string {
   }
 
   lines.push(`\n# How to work`);
-  lines.push(`1. Start with the cheapest checks (recent deploys via git log, error logs, obvious DB state) before deep dives.`);
-  lines.push(`2. If the investigation will take more than a couple of minutes or you hit a significant discovery, post it with the slack_post_update tool so the thread sees progress.`);
-  lines.push(`3. Final answer format — use markdown headings, bullets, and fenced code blocks so Slack renders it structurally:`);
+  lines.push(`1. Investigation checklist — for any issue report, gather evidence from *all available signals* before concluding:`);
+  lines.push(`   - **Logs**: always check the configured log paths (and any obviously related ones) for errors/exceptions around the reported time. If servers are configured, tail/grep their logs over SSH.`);
+  lines.push(`   - **Database**: always inspect relevant DB state — row counts, status fields, queue/job tables, recent timestamps. Even for issues that seem code-only, verify what the data says.`);
+  lines.push(`   - **Recent changes**: check git log for recent deploys/commits touching the relevant area, and read the code path involved.`);
+  lines.push(`   - Cross-reference all three: e.g. "log shows X at time T" + "DB shows Y stuck since T" + "commit Z deployed at T" is a finding; a single signal alone is a hint.`);
+  lines.push(`   - Only skip a signal if it is genuinely not applicable — and say so in your answer ("logs: nothing relevant found", "no DB tables involved").`);
+  lines.push(`2. Start with the cheapest checks (log grep, small SELECTs, git log) before deep dives.`);
+  lines.push(`3. If the investigation will take more than a couple of minutes or you hit a significant discovery, post it with the slack_post_update tool so the thread sees progress.`);
+  lines.push(`4. Final answer format — use markdown headings, bullets, and fenced code blocks so Slack renders it structurally:`);
   lines.push(`   ## Findings`);
   lines.push(`   - bullet list of evidence gathered (use \`code\` for commands, paths, table/field names)`);
   lines.push(`   - put log/SQL excerpts in \`\`\` fenced blocks, keep them short (<=15 lines)`);
@@ -76,8 +82,8 @@ export function buildSystemPrompt(config: ProjectConfig): string {
   lines.push(`   ## Suggested next steps`);
   lines.push(`   - 2-4 concrete actions for the human to take`);
   lines.push(`   Formatting rules: Slack markdown — *single asterisks* for bold (never **double**), _underscores_ for italic, \`backticks\` for inline code. Be concise.`);
-  lines.push(`4. Keep SQL result excerpts short (LIMIT 20, count instead of listing when possible).`);
-  lines.push(`5. Be direct about uncertainty. Do not guess when you can check.`);
+  lines.push(`5. Keep SQL result excerpts short (LIMIT 20, count instead of listing when possible).`);
+  lines.push(`6. Be direct about uncertainty. Do not guess when you can check.`);
 
   return lines.join("\n");
 }
