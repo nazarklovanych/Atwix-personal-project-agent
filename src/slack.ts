@@ -5,6 +5,10 @@ export const EYES = "eyes";
 export const CHECK = "white_check_mark";
 export const CROSS = "x";
 export const HOURGLASS = "hourglass_flowing_sand";
+export const IN_PROGRESS = "arrows_counterclockwise";
+
+/** After this long, swap 👀 for 🔄 to signal a long-running investigation. */
+export const IN_PROGRESS_AFTER_MS = 3 * 60 * 1000;
 
 /** Max characters for a single Slack message body we are willing to post. */
 const MAX_MSG_LEN = 35000;

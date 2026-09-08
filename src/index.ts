@@ -11,6 +11,8 @@ import {
   CROSS,
   EYES,
   HOURGLASS,
+  IN_PROGRESS,
+  IN_PROGRESS_AFTER_MS,
   postToThread,
   removeReaction,
   stripBotMention,
@@ -97,6 +99,14 @@ async function main() {
 
       await addReaction(client, event.channel, threadTs, EYES);
 
+      // Long investigations: after 3 min, swap 👀 for 🔄 so the channel sees it's still working
+      let switchedToProgress = false;
+      const progressTimer = setTimeout(async () => {
+        switchedToProgress = true;
+        await removeReaction(client, event.channel, threadTs, EYES);
+        await addReaction(client, event.channel, threadTs, IN_PROGRESS);
+      }, IN_PROGRESS_AFTER_MS);
+
       try {
         const { finalText, timedOut, toolTrail } = await runInvestigation(
           config,
@@ -137,7 +147,8 @@ async function main() {
         );
         await addReaction(client, event.channel, threadTs, CROSS);
       } finally {
-        await removeReaction(client, event.channel, threadTs, EYES);
+        clearTimeout(progressTimer);
+        await removeReaction(client, event.channel, threadTs, switchedToProgress ? IN_PROGRESS : EYES);
       }
     } catch (e) {
       console.error("[ppa] handler error:", e);
