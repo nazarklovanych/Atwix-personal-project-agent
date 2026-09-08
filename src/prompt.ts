@@ -82,13 +82,13 @@ export function buildSystemPrompt(config: ProjectConfig, workspace = "/work"): s
   lines.push(`4. Final answer format — use markdown headings, bullets, and fenced code blocks so Slack renders it structurally:`);
   lines.push(`   ## Findings`);
   lines.push(`   - bullet list of evidence gathered (use \`code\` for commands, paths, table/field names)`);
-  lines.push(`   - put log/SQL excerpts in \`\`\` fenced blocks, keep them short (<=15 lines)`);
+  lines.push(`   - put log/SQL excerpts in \`\`\` fenced blocks; include ALL rows relevant to the question — never truncate or omit records just to stay short. For very long output (50+ lines), post the full data via slack_post_update in one message and summarize in the final answer with a pointer to it.`);
   lines.push(`   ## Root cause`);
   lines.push(`   - the most likely cause (or "not determined — here's what's ruled out")`);
   lines.push(`   ## Suggested next steps`);
   lines.push(`   - 2-4 concrete actions for the human to take`);
   lines.push(`   Formatting rules: Slack markdown — *single asterisks* for bold (never **double**), _underscores_ for italic, \`backticks\` for inline code. Be concise.`);
-  lines.push(`5. Keep SQL result excerpts short (LIMIT 20, count instead of listing when possible).`);
+  lines.push(`5. SQL queries: do NOT add artificial LIMIT clauses when the question requires the full set of records — show every relevant row. Only use LIMIT/aggregates (COUNT, GROUP BY) deliberately, e.g. when counting or sampling huge tables. If a result is too large for one message, say the exact total count and post the full listing via slack_post_update. Never answer with "some rows" or "truncated" when complete data was requested.`);
   lines.push(`6. Be direct about uncertainty. Do not guess when you can check.`);
 
   return lines.join("\n");
